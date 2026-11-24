@@ -1,0 +1,32 @@
+# Analysis settings (used from step 2 onward). Thresholds live here, not in code.
+thresholds:
+  cpm_drilldown_pct: 10          # drill into networks when a type's CPM moves more than this (WoW %)
+  network_min_share_pct: 5       # networks below this impression share are grouped as "Other"
+  source_gap_pp: 2               # flag when MMP and Firebase WoW LTVD1 changes differ by more than this
+  share_of_change_min_pct: 1     # show "% of the change" only when |LTV change| is at least this...
+  share_of_change_min_concentration: 0.5  # ...and |total| >= this x sum of |contributions| (not offsetting)
+  # An ad type's network table is flagged if ANY of these hold (type CPM rule above included):
+  network_cpm_change_pct: 10     # a network's (>= min share) CPM change differs from its type's by more than this
+  network_share_change_pp: 5     # a network's impression share moved by more than this
+  network_effect_pts: 1          # a network's mix effect exceeds this many points of LTV change
+baseline_weeks: 12               # trailing weeks used for "is this change unusual?" z-scores
+agent:
+  model: claude-sonnet-5-5
+  max_tool_calls: 8              # tool budget per run (submit_findings not counted)
+  max_turns: 15                  # hard stop on request/response rounds
+  max_validation_retries: 1      # times the agent may fix unverified numbers before we accept with warnings
+  max_tokens: 4000               # per response
+  prompt_caching: true           # cache the repeated prefix (tools, system prompt, earlier turns)
+  pricing_usd_per_mtok:          # for cost estimates only; check platform.claude.com pricing for current rates
+    input: 2.00
+    output: 10.00
+    cache_write: 2.50            # 5-minute cache write = 1.25x input
+    cache_read: 0.20             # cache hit = 0.1x input
+eval:
+  min_effect_pts: 1.0            # planted effects smaller than this (|pts|) are "minor": not counted as misses
+  detect_min_pts: 0.75           # a material effect is "detectable" if what the data SHOWS this week is this big
+                                 # (right sign); noise can hide a real effect, and nobody can be scored on that
+  test_seed: 2027                # the held-out test set; don't look at its runs while tuning
+  test_worlds: 1                 # random worlds in the test set (8 markets each)
+  control_share: 0.3             # share of test markets with nothing planted
+  est_input_tokens_per_run: 25000

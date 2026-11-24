@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F7F8FA; --surface: #FFFFFF; --ink: #18212F; --muted: #5B6576; --rule: #DCE0E6;
+    --up: #1E7B57; --down: #B03A3A; --total: #33507F; --flag: #9A6512; --flag-bg: #FBF3E4;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #12161D; --surface: #181D26; --ink: #E5E9F0; --muted: #9AA4B4; --rule: #2B3340;
+      --up: #4DBA8A; --down: #E27878; --total: #84A6E0; --flag: #E2B25A; --flag-bg: #2A2416;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 15px/1.55 "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding: 40px 24px 64px; }
+  .context { color: var(--muted); margin: 0 0 6px; }
+  h1 { font-size: 44px; line-height: 1.1; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+  .ltv-line { margin: 10px 0 0; font-size: 17px; }
+  .ltv-line .z { color: var(--muted); }
+  .ltv-line .z.unusual { color: var(--flag); font-weight: 500; }
+  h2 { font-size: 20px; font-weight: 600; margin: 48px 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+  .narrative { margin: 28px 0 0; padding: 20px 24px; background: var(--surface);
+               border-left: 3px solid var(--total); border-radius: 0 6px 6px 0; }
+  .narrative p { margin: 0 0 10px; max-width: 75ch; }
+  .narrative p:last-of-type { margin-bottom: 0; }
+  .narrative .source { color: var(--muted); font-size: 13px; margin-top: 14px; }
+  .up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--muted); }
+  .bridge-wrap { overflow-x: auto; }
+  .bridge { width: 100%; min-width: 640px; height: auto; margin-top: 8px; font: 14px "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; }
+  .bridge text.label { fill: var(--ink); }
+  .bridge text.label.total, .bridge text.value.total { font-weight: 600; }
+  .bridge text.value.up { fill: var(--up); } .bridge text.value.down { fill: var(--down); }
+  .bridge text.value.total { fill: var(--total); }
+  .bridge rect.up { fill: var(--up); } .bridge rect.down { fill: var(--down); }
+  .bridge rect.total { fill: var(--total); }
+  .bridge line.zero { stroke: var(--rule); stroke-width: 1.5; }
+  .bridge line.connector { stroke: var(--muted); stroke-dasharray: 2 3; }
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  th, td { padding: 8px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-weight: 500; color: var(--muted); font-size: 13px; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.metric { white-space: normal; }
+  td.z.unusual { color: var(--flag); font-weight: 600; }
+  .spark polyline { stroke: var(--total); } .spark circle { fill: var(--total); }
+  td.spark-cell { padding-top: 4px; padding-bottom: 0; }
+  tr.flagged td { background: var(--flag-bg); }
+  tr.flagged td:first-child { box-shadow: inset 3px 0 0 var(--flag); }
+  details { margin: 0 0 12px; }
+  details > summary { cursor: pointer; padding: 10px 0; font-weight: 500; list-style-position: outside; }
+  details > summary:focus-visible { outline: 2px solid var(--total); outline-offset: 2px; }
+  .flag-note { color: var(--flag); font-weight: 500; }
+  .reasons { margin: 0 0 10px; padding-left: 20px; color: var(--flag); }
+  .checks { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .check { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; }
+  .check h3 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+  .check p, .check ul { margin: 0; color: var(--muted); }
+  .check.warn { border-color: var(--flag); }
+  .check.warn h3 { color: var(--flag); }
+  .narrative h3 { font-size: 15px; font-weight: 600; margin: 18px 0 6px; }
+  .narrative ul { margin: 0; padding-left: 20px; max-width: 75ch; }
+  .narrative li { margin-bottom: 8px; }
+  .agent-headline { font-size: 18px; font-weight: 500; }
+  .driver-name { font-weight: 500; }
+  .conf { font-size: 12px; padding: 1px 8px; border-radius: 10px; margin-left: 6px; border: 1px solid var(--rule); color: var(--muted); }
+  .conf-high { border-color: var(--up); color: var(--up); }
+  .verdict { font-size: 12px; padding: 1px 8px; border-radius: 10px; margin-left: 6px; background: var(--paper); color: var(--muted); }
+  .v-specific_issue { background: var(--flag-bg); color: var(--flag); }
+  .conf-low { border-color: var(--flag); color: var(--flag); }
+  .trace { padding-left: 22px; }
+  .trace li { margin-bottom: 14px; }
+  .trace .reasoning { margin: 0 0 4px; max-width: 75ch; }
+  .trace details { margin: 0; }
+  .trace summary { padding: 2px 0; font-weight: 400; list-style-position: inside; }
+  code, pre { font-family: "IBM Plex Mono", Consolas, "Courier New", monospace; font-size: 13px; }
+  pre { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px;
+        overflow-x: auto; max-height: 320px; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 13px; }
+  @media (max-width: 600px) { h1 { font-size: 34px; } main { padding-top: 24px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="context">{{ geo }} {{ platform }}, {{ period }}, compared with the {{ prev_period }}</p>
+    <h1 class="{{ headline_cls }}">{{ headline }}</h1>
+    <p class="ltv-line">{{ ltv_prev }} → {{ ltv_this }} per install (MMP, D0–1 revenue)
+      {% if ltv_z %}<span class="z {% if ltv_unusual %}unusual{% endif %}">
+        · z = {{ ltv_z }} vs the last {{ n_weeks }} weekly changes{% if ltv_unusual %}, unusual{% endif %}</span>{% endif %}
+    </p>
+  </header>
+
+  <section class="narrative" aria-label="Summary">
+    {% if agent %}
+      <p class="agent-headline">{{ agent.headline }}</p>
+      <p>{{ agent.summary }}</p>
+      {% if agent.drivers %}
+      <h3>Drivers explained</h3>
+      <ul class="explained">
+        {% for d in agent.drivers %}
+        <li><span class="driver-name">{{ d.driver }}{% if d.network %}, {{ d.network }}{% endif %}</span>
+          {% if d.verdict %}<span class="verdict v-{{ d.verdict }}">{{ d.verdict | replace("_", " ") }}</span>{% endif %}
+          <span class="conf conf-{{ d.confidence }}">{{ d.confidence }} confidence</span><br>{{ d.explanation }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if agent.next_steps %}
+      <h3>Suggested next steps</h3>
+      <ul>{% for s in agent.next_steps %}<li>{{ s }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if agent.caveats %}
+      <h3>Caveats</h3>
+      <ul>{% for c in agent.caveats %}<li>{{ c }}</li>{% endfor %}</ul>
+      {% endif %}
+      <p class="source">Written by Claude ({{ agent.model }}) after {{ agent.tool_calls }} tool calls.
+        {% if agent.warnings %}<span class="flag-note">Some numbers could not be verified; see the investigation section.</span>
+        {% else %}Every number in this summary was checked against the pipeline's results.{% endif %}</p>
+    {% else %}
+      {% for sentence in narrative %}<p>{{ sentence }}</p>{% endfor %}
+      <p class="source">Rule-based summary (generated by code, no AI).
+        {% if agent_error %}<span class="flag-note">The agent did not run: {{ agent_error }}</span>{% endif %}</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>What moved LTV</h2>
+    <p class="lede">Each bar is one driver's contribution, in points of LTV change. Bars add up to the total.</p>
+    <div class="bridge-wrap">{{ bridge_svg | safe }}</div>
+  </section>
+
+  <section>
+    <h2>Drivers</h2>
+    <p class="lede">LMDI decomposition of the MMP LTVD1 change. CPM effects are split by network in the ad networks section.
+      {% if not show_share %} "% of change" is not shown: the total is small or drivers offset each other, so shares would exaggerate.{% endif %}</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Driver</th><th>Category</th><th>Driver moved</th><th>Points of LTV change</th>{% if show_share %}<th>% of change</th>{% endif %}</tr></thead>
+      <tbody>
+      {% for d in drivers %}
+        <tr><td class="metric">{{ d.driver }}</td><td>{{ d.category }}</td><td>{{ d.factor }}</td>
+          <td class="{{ d.cls }}">{{ d.pts }}</td>{% if show_share %}<td>{{ d.share }}</td>{% endif %}</tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Key metrics</h2>
+    <p class="lede">z compares this week's change with the previous {{ n_weeks }} weekly changes; beyond ±2 is unusual and highlighted.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Metric</th><th>Previous week</th><th>This week</th><th>Change</th><th>z</th><th>Last {{ n_weeks + 1 }} weeks</th></tr></thead>
+      <tbody>
+      {% for k in kpis %}
+        <tr><td class="metric">{{ k.metric }}</td><td>{{ k.prev }}</td><td>{{ k.this }}</td>
+          <td class="{{ k.cls }}">{{ k.change }}</td><td class="z {% if k.unusual %}unusual{% endif %}">{{ k.z }}</td>
+          <td class="spark-cell">{{ k.spark | safe }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Engagement detail</h2>
+    <p class="lede">D0 impressions are per install; D1 impressions are per user who returned on D1, so they exclude the retention effect.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Metric</th><th>Previous week</th><th>This week</th><th>Change</th><th>z</th><th>Last {{ n_weeks + 1 }} weeks</th></tr></thead>
+      <tbody>
+      {% for k in engagement %}
+        <tr><td class="metric">{{ k.metric }}</td><td>{{ k.prev }}</td><td>{{ k.this }}</td>
+          <td class="{{ k.cls }}">{{ k.change }}</td><td class="z {% if k.unusual %}unusual{% endif %}">{{ k.z }}</td>
+          <td class="spark-cell">{{ k.spark | safe }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Ad networks</h2>
+    <p class="lede">Price effect: the network's own CPM changed. Mix effect: impressions moved between networks.
+      Networks under {{ thresholds.network_min_share_pct }}% share in both weeks are grouped as Other. Flagged types open automatically.</p>
+    {% for n in networks %}
+    <details {% if n.flagged %}open{% endif %}>
+      <summary>{{ n.type }}: CPM <span class="{{ n.cpm_cls }}">{{ n.cpm_change }}</span>
+        {% if n.flagged %}<span class="flag-note"> · flagged</span>{% else %}<span class="flat"> · no network changes above thresholds</span>{% endif %}</summary>
+      {% if n.reasons %}<ul class="reasons">{% for reason in n.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>{% endif %}
+      <div class="table-wrap"><table>
+        <thead><tr><th>Network</th><th>Share prev</th><th>Share this</th><th>Share change</th>
+          <th>CPM prev</th><th>CPM this</th><th>CPM change</th><th>Price effect, pts</th><th>Mix effect, pts</th></tr></thead>
+        <tbody>
+        {% for r in n.rows %}
+          <tr class="{% if r.flagged %}flagged{% endif %}"><td>{{ r.network }}</td><td>{{ r.share_prev }}</td><td>{{ r.share_this }}</td>
+            <td>{{ r.share_change }}</td><td>{{ r.cpm_prev }}</td><td>{{ r.cpm_this }}</td>
+            <td class="{{ r.cpm_cls }}">{{ r.cpm_change }}</td><td class="{{ r.price_cls }}">{{ r.price }}</td>
+            <td class="{{ r.mix_cls }}">{{ r.mix }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </details>
+    {% endfor %}
+  </section>
+
+  <section>
+    <h2>Data checks</h2>
+    <div class="checks">
+      <div class="check {% if quality_issues %}warn{% endif %}">
+        <h3>Completeness</h3>
+        {% if quality_issues %}<ul>{% for i in quality_issues %}<li>{{ i }}</li>{% endfor %}</ul>
+        {% else %}<p>All three sources have 7 days in both weeks, with D1 data present.</p>{% endif %}
+      </div>
+      <div class="check {% if validation.flagged %}warn{% endif %}">
+        <h3>MMP vs Firebase</h3>
+        <p>LTVD1 change {{ validation.mmp }} (MMP) vs {{ validation.fb }} (Firebase), a {{ validation.diff }} difference
+          {% if validation.flagged %}above{% else %}within{% endif %} the {{ validation.threshold }}pp tolerance.
+          MMP runs {{ validation.gap }} above Firebase in level.</p>
+      </div>
+      <div class="check {% if residual_large %}warn{% endif %}">
+        <h3>Unexplained part</h3>
+        <p>{{ residual }} points of the change are not attributed to a driver (cohort vs all-user CPM, measurement).</p>
+      </div>
+    </div>
+  </section>
+
+  {% if agent %}
+  <section>
+    <h2>How the agent investigated</h2>
+    <p class="lede">The agent started from the pipeline's results and chose these steps itself. Its reasoning is shown before each step;
+      expand a step to see the data it received. {{ agent.tokens }}.</p>
+    <ol class="trace">
+      {% for st in agent.steps %}
+      <li>
+        {% if st.reasoning %}<p class="reasoning">{{ st.reasoning }}</p>{% endif %}
+        <details><summary><code>{{ st.title }}</code></summary>{% if st.output %}<pre>{{ st.output }}</pre>{% endif %}</details>
+      </li>
+      {% endfor %}
+    </ol>
+    {% if agent.warnings %}
+    <div class="check warn"><h3>Unverified numbers</h3><ul>{% for w in agent.warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <footer>
+    Generated {{ generated }} from {{ source }}. Thresholds: type CPM {{ thresholds.cpm_drilldown_pct }}%,
+    network CPM {{ thresholds.network_cpm_change_pct }}%, network share {{ thresholds.network_share_change_pp }}pp,
+    network effect {{ thresholds.network_effect_pts }} pts, source gap {{ thresholds.source_gap_pp }}pp.
+  </footer>
+</main>
+</body>
+</html>

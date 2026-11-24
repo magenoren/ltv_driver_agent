@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent evaluation: {{ set_name }} set</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root { --paper:#F7F8FA; --surface:#FFFFFF; --ink:#18212F; --muted:#5B6576; --rule:#DCE0E6;
+          --up:#1E7B57; --down:#B03A3A; --total:#33507F; --flag:#9A6512; --flag-bg:#FBF3E4; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#12161D; --surface:#181D26; --ink:#E5E9F0; --muted:#9AA4B4; --rule:#2B3340;
+            --up:#4DBA8A; --down:#E27878; --total:#84A6E0; --flag:#E2B25A; --flag-bg:#2A2416; color-scheme: dark; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font:15px/1.55 "IBM Plex Sans","Segoe UI",system-ui,sans-serif; font-variant-numeric: tabular-nums; }
+  main { max-width:1100px; margin:0 auto; padding:40px 24px 64px; }
+  .context { color:var(--muted); margin:0 0 6px; }
+  h1 { font-size:36px; line-height:1.15; font-weight:600; letter-spacing:-0.02em; margin:0 0 24px; }
+  h2 { font-size:20px; font-weight:600; margin:44px 0 6px; }
+  .lede { color:var(--muted); margin:0 0 14px; max-width:80ch; }
+  .metrics { display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); }
+  .metric { background:var(--surface); border:1px solid var(--rule); border-radius:6px; padding:14px 16px; }
+  .metric .value { font-size:28px; font-weight:600; line-height:1.2; }
+  .metric .label { color:var(--muted); font-size:13px; }
+  .metric.key { border-color:var(--total); }
+  .table-wrap { overflow-x:auto; background:var(--surface); border:1px solid var(--rule); border-radius:6px; }
+  table { border-collapse:collapse; width:100%; min-width:760px; }
+  th, td { padding:8px 12px; text-align:left; border-bottom:1px solid var(--rule); vertical-align:top; }
+  th { font-weight:500; color:var(--muted); font-size:13px; white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.num { text-align:right; white-space:nowrap; }
+  .marks span { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:3px; vertical-align:-1px; }
+  .marks .hit { background:var(--up); } .marks .miss { background:var(--down); }
+  .marks .miss-minor { background:var(--rule); }
+  .minor { color:var(--muted); }
+  .warn { color:var(--flag); font-weight:500; }
+  a { color:var(--total); }
+  footer { margin-top:44px; color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="context">{{ n_cases }} markets × {{ runs }} runs · {{ model }} · generated {{ generated }}</p>
+  <h1>Agent evaluation: {{ set_name }} set</h1>
+
+  <div class="metrics">
+    <div class="metric key"><div class="value">{{ "%.0f"|format(s.recall_detectable_pct) if s.recall_detectable_pct is not none else "–" }}%</div>
+      <div class="label">Detectable material causes found ({{ s.recall_detectable }} scenario-runs)</div></div>
+    <div class="metric key"><div class="value">{{ "%.0f"|format(s.control_clean_pct) if s.control_clean_pct is not none else "–" }}%</div>
+      <div class="label">Control runs with no false alarm ({{ s.control_runs }} runs)</div></div>
+    {% if s.artifact_runs %}
+    <div class="metric key"><div class="value">{{ "%.0f"|format(s.artifact_recognized_pct) }}%</div>
+      <div class="label">Data issues recognized as data issues ({{ s.artifact_runs }} runs)</div></div>
+    {% endif %}
+    <div class="metric"><div class="value">{{ "%.2f"|format(s.false_alarms_per_run) if s.false_alarms_per_run is not none else "–" }}</div>
+      <div class="label">False alarms per run, all markets ({{ "%.2f"|format(s.high_conf_false_alarms_per_run) if s.high_conf_false_alarms_per_run is not none else "–" }} at high confidence)</div></div>
+    <div class="metric"><div class="value">{{ "%.0f"|format(s.recall_material_pct) if s.recall_material_pct is not none else "–" }}%</div>
+      <div class="label">All material causes found, incl. undetectable ({{ s.recall_material }})</div></div>
+    <div class="metric"><div class="value">{{ "%.0f"|format(s.network_named_pct) if s.network_named_pct is not none else "–" }}%</div>
+      <div class="label">Right network named, when a network cause was found ({{ s.network_named }})</div></div>
+    <div class="metric"><div class="value">{{ "%.0f"|format(s.recall_all_pct) if s.recall_all_pct is not none else "–" }}%</div>
+      <div class="label">All planted causes found, incl. minor ({{ s.recall_all }})</div></div>
+    <div class="metric"><div class="value">{{ "%.0f"|format(s.unverified_runs_pct) if s.unverified_runs_pct is not none else "–" }}%</div>
+      <div class="label">Runs with unverified numbers</div></div>
+    <div class="metric"><div class="value">{{ "%.1f"|format(s.avg_tool_calls) if s.avg_tool_calls is not none else "–" }}</div>
+      <div class="label">Tool calls per run</div></div>
+    <div class="metric"><div class="value">{{ "{:,.0f}".format(s.avg_input_tokens) if s.avg_input_tokens is not none else "–" }}</div>
+      <div class="label">Input tokens per run ({{ "%.0f"|format(s.cache_read_share_pct) if s.cache_read_share_pct is not none else "0" }}% read from cache)</div></div>
+    <div class="metric"><div class="value">${{ "%.3f"|format(s.cost_per_run_usd) if s.cost_per_run_usd is not none else "–" }}</div>
+      <div class="label">Est. cost per run (total ${{ "%.2f"|format(s.total_cost_usd) }} vs ${{ "%.2f"|format(s.total_uncached_cost_usd) }} without caching)</div></div>
+  </div>
+  {% if s.errors %}<p class="warn">{{ s.errors }} run(s) failed with an error; they are excluded from the rates. See the runs table.</p>{% endif %}
+
+  <h2>Scenarios</h2>
+  <p class="lede">True effect: the scenario's contribution in points of LTV change, measured by regenerating the world without it.
+    Observed: what this week's data shows (true effect plus noise). Scenarios under {{ min_effect }} pt are minor; material scenarios
+    whose observed effect is too small or points the wrong way are undetectable. Missing either is not counted as a failure (grey).
+    Found means the agent listed the driver as a specific issue. Each square is one run.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Market</th><th>Planted</th><th>True, pts</th><th>Observed, pts</th><th></th><th>Found</th><th>Verdicts given</th><th>Network named</th><th>False alarms in market</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr><td>{{ r.market }}{% if set_name == "test" %} <span class="minor">w{{ r.world }}</span>{% endif %}</td>
+        <td class="{% if r.control %}minor{% endif %}">{{ r.scenario }}</td>
+        <td class="num">{{ r.effect }}</td><td class="num">{{ r.observed }}</td>
+        <td class="{% if r.material in ('minor', 'undetectable') %}minor{% endif %}">{{ r.material }}</td>
+        <td class="marks">{% for m in r.marks %}<span class="{{ m }}" title="{{ m }}"></span>{% endfor %} {{ r.found }}</td>
+        <td>{{ r.verdicts }}</td><td>{{ r.network }}</td>
+        <td class="num {% if r.false_alarms %}warn{% endif %}">{{ r.false_alarms }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+
+  <h2>Runs</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Case</th><th>Run</th><th>Headline</th><th>False alarms</th><th>Tools</th><th>Tokens in</th><th>Checks</th><th>Report</th></tr></thead>
+    <tbody>
+    {% for r in records %}
+      <tr><td>{{ r.case }}</td><td class="num">{{ r.run }}</td>
+        <td>{% if r.error %}<span class="warn">{{ r.error }}</span>{% else %}{{ r.findings.headline if r.findings else "" }}{% endif %}</td>
+        <td>{% for fa in r.false_alarms %}{{ fa }}{% if r.false_alarm_confidence %} ({{ r.false_alarm_confidence[loop.index0] }}){% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td class="num">{{ r.tool_calls }}</td><td class="num">{{ "{:,}".format(r.input_tokens) }}</td>
+        <td>{% if r.unverified %}<span class="warn">{{ r.unverified }} unverified</span> {% endif %}{% if r.malformed %}<span class="warn">{{ r.malformed }} malformed</span>{% endif %}</td>
+        <td>{% if r.report %}<a href="reports/{{ r.report }}">open</a>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+
+  <footer>Scoring uses only the agent's structured findings (driver, verdict, network), not its wording.</footer>
+</main>
+</body>
+</html>

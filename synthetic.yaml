@@ -1,0 +1,126 @@
+# Parameters for the synthetic data generator.
+# Everything that shapes the fake world lives here, so you can change the world without touching code.
+
+seed: 42                       # same seed -> exactly the same data every run (reproducible)
+last_week_start: 2026-11-01    # Sunday. The most recent complete week (D1 of its last cohort is 2026-11-08)
+n_weeks: 16                    # history length; the analysis uses up to 12 trailing weeks as a baseline
+
+# ---------------------------------------------------------------- the "game"
+# Reference values are for US iOS. Other geos/platforms are scaled by the indices below.
+base:
+  cpm_usd:                     # average CPM per ad type
+    Banner: 0.80
+    Interstitial: 18.0
+    Rewarded: 25.0
+  imps_d0_per_install:         # impressions on day 0, per installer
+    Banner: 60
+    Interstitial: 6.0
+    Rewarded: 2.5
+  imps_d1_per_active:          # impressions on day 1, per user who came back on day 1
+    Banner: 70
+    Interstitial: 7.0
+    Rewarded: 3.0
+  reach:                       # share of active users who saw at least one impression of the type
+    Banner: 0.92
+    Interstitial: 0.75
+    Rewarded: 0.40
+  other_events_per_user:       # non-ad events per active user ("other" type rows)
+    0: 30
+    1: 22
+
+geo_cpm_index: {US: 1.00, GB: 0.70, DE: 0.75, BR: 0.20}
+
+platform:
+  ios:     {cpm_index: 1.00, retention_d1: 0.35}
+  android: {cpm_index: 0.75, retention_d1: 0.30}
+
+combos:                        # which geo x platform series to generate, with average daily installs
+  - {geo: US, platform: ios,     installs_per_day: 3000}
+  - {geo: US, platform: android, installs_per_day: 4000}
+  - {geo: GB, platform: ios,     installs_per_day: 800}
+  - {geo: GB, platform: android, installs_per_day: 1000}
+  - {geo: DE, platform: ios,     installs_per_day: 600}
+  - {geo: DE, platform: android, installs_per_day: 900}
+  - {geo: BR, platform: ios,     installs_per_day: 400}
+  - {geo: BR, platform: android, installs_per_day: 2500}
+
+# Ad networks per type: baseline impression share and price relative to the type average.
+# cpm_index values are re-normalised in code so that the share-weighted average is exactly 1.
+networks:
+  Interstitial:
+    AppLovin:  {share: 0.40, cpm_index: 1.05}
+    Mintegral: {share: 0.22, cpm_index: 0.95}
+    AdMob:     {share: 0.20, cpm_index: 1.00}
+    Unity:     {share: 0.12, cpm_index: 0.90}
+    Pangle:    {share: 0.06, cpm_index: 0.80}
+  Rewarded:
+    AppLovin:  {share: 0.35, cpm_index: 1.05}
+    AdMob:     {share: 0.25, cpm_index: 1.05}
+    Unity:     {share: 0.20, cpm_index: 0.95}
+    Mintegral: {share: 0.15, cpm_index: 0.90}
+    Pangle:    {share: 0.05, cpm_index: 0.80}
+  Banner:
+    AppLovin:  {share: 0.45, cpm_index: 1.05}
+    AdMob:     {share: 0.35, cpm_index: 1.00}
+    Mintegral: {share: 0.12, cpm_index: 0.90}
+    Pangle:    {share: 0.04, cpm_index: 0.80}
+    Unity:     {share: 0.04, cpm_index: 0.85}
+
+# ---------------------------------------------------------------- measurement differences between sources
+measurement:
+  firebase_install_ratio: 0.96   # Firebase counts ~4% fewer installs than the MMP
+  mmp_revenue_gap: 1.02          # MMP LTV runs ~2% above Firebase LTV (stable, so WoW changes agree)
+  cohort_cpm_premium:            # new users monetise slightly below the all-user CPM in the monetization table
+    0: 0.95
+    1: 0.97
+  dau_per_daily_install: 9       # total DAU ~ 9x daily installs (drives monetization-table volumes)
+
+# ---------------------------------------------------------------- realism
+noise:
+  daily_sigma: 0.02              # daily noise at reference volume...
+  reference_installs: 3000       # ...grows as 1/sqrt(volume) for smaller combos
+  max_sigma: 0.06
+  drift_sigma: 0.003             # slow random walk in engagement/retention, so history isn't flat
+
+seasonality:                     # Q4 CPM ramp-up (advertisers spend more before the holidays)
+  q4_start: 2026-10-01
+  q4_peak: 2026-12-24
+  q4_uplift: 0.30                # +30% CPM by the peak date
+
+dow:                             # day-of-week factors, Sunday first
+  installs: [1.15, 0.95, 0.92, 0.93, 0.95, 1.02, 1.12]
+  cpm:      [0.96, 1.02, 1.03, 1.03, 1.02, 1.00, 0.96]
+
+# ---------------------------------------------------------------- planted scenarios (the "ground truth")
+# target: installs | retention_d1 | imps_d0 | imps_d1 | cpm | network_share
+# magnitude is a multiplier (0.85 = -15%, 0 = stops completely). Optional: ad_type, network, end, ramp_days.
+# Engagement and CPM effects apply by activity date; retention and installs by install date.
+# Combos with no scenario (GB iOS, DE iOS, DE Android, BR iOS) are controls: only noise + seasonality.
+scenarios:
+  # US iOS - one main driver plus two smaller ones (like your first example)
+  - {id: us_ios_inter_d0, geo: US, platform: ios, target: imps_d0, ad_type: Interstitial,
+     magnitude: 0.82, start: 2026-11-01, description: "Fewer D0 interstitials per install (engagement/playtime)"}
+  - {id: us_ios_applovin_banner, geo: US, platform: ios, target: cpm, ad_type: Banner, network: AppLovin,
+     magnitude: 0.85, start: 2026-11-04, description: "AppLovin banner CPM -15% from Wednesday"}
+  - {id: us_ios_retention, geo: US, platform: ios, target: retention_d1,
+     magnitude: 0.96, start: 2026-11-01, description: "D1 retention -4% relative"}
+
+  # GB Android - offsetting effects (like your second example)
+  - {id: gb_and_mintegral_inter, geo: GB, platform: android, target: cpm, ad_type: Interstitial, network: Mintegral,
+     magnitude: 1.45, start: 2026-11-01, description: "Mintegral interstitial CPM +45%"}
+  - {id: gb_and_admob_rewarded_off, geo: GB, platform: android, target: network_share, ad_type: Rewarded, network: AdMob,
+     magnitude: 0.0, start: 2026-11-01, description: "AdMob stops serving rewarded ads"}
+  - {id: gb_and_rewarded_d0, geo: GB, platform: android, target: imps_d0, ad_type: Rewarded,
+     magnitude: 0.80, start: 2026-11-01, description: "Rewarded impressions per user -20% (D0)"}
+  - {id: gb_and_rewarded_d1, geo: GB, platform: android, target: imps_d1, ad_type: Rewarded,
+     magnitude: 0.80, start: 2026-11-01, description: "Rewarded impressions per user -20% (D1)"}
+
+  # US Android - a step change on a specific day (looks like a release)
+  - {id: us_and_retention_step, geo: US, platform: android, target: retention_d1,
+     magnitude: 0.87, start: 2026-11-03, description: "D1 retention -13% from Tuesday's cohort"}
+
+  # BR Android - volume spike with lower-quality users
+  - {id: br_and_install_spike, geo: BR, platform: android, target: installs,
+     magnitude: 1.60, start: 2026-11-01, description: "Installs +60% (UA push)"}
+  - {id: br_and_quality, geo: BR, platform: android, target: retention_d1,
+     magnitude: 0.93, start: 2026-11-01, description: "D1 retention -7% (lower-quality users)"}

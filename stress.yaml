@@ -1,0 +1,39 @@
+# Stress set: a hand-designed world where every market tests one specific way to get it wrong.
+# Same game as synthetic.yaml (all other parameters are taken from there); only the noise seed,
+# the scenarios and the data issues differ. Effect sizes are measured by the evaluation
+# (counterfactual), so magnitudes here are inputs, not promises.
+
+seed: 314
+
+scenarios:
+  # US iOS - two causes on the same ad type, pulling in opposite directions
+  - {id: st_us_ios_applovin_rewarded, geo: US, platform: ios, target: cpm, ad_type: Rewarded, network: AppLovin,
+     magnitude: 0.65, start: 2026-11-01, description: "AppLovin rewarded CPM -35% (same type as next)"}
+  - {id: st_us_ios_rewarded_d0_up, geo: US, platform: ios, target: imps_d0, ad_type: Rewarded,
+     magnitude: 1.15, start: 2026-11-01, description: "Rewarded D0 impressions +15% (offsets the CPM drop)"}
+
+  # US Android - a REAL retention drop on the last cohort only. Twin of the GB Android data artifact:
+  # both look like "Saturday's retention collapsed"; here MMP agrees and the data checks pass.
+  - {id: st_us_and_retention_saturday, geo: US, platform: android, target: retention_d1,
+     magnitude: 0.60, start: 2026-11-07, description: "D1 retention -40% for the Saturday cohort only (real)"}
+
+  # GB iOS - a real but modest effect, just above the materiality threshold
+  - {id: st_gb_ios_inter_d1, geo: GB, platform: ios, target: imps_d1, ad_type: Interstitial,
+     magnitude: 0.92, start: 2026-11-01, description: "Interstitial D1 impressions per active -8% (near threshold)"}
+
+  # DE iOS - gradual erosion over six weeks: this week's change looks like the previous ones,
+  # so its z-score is unremarkable even though the trend is real and material
+  - {id: st_de_ios_inter_d0_trend, geo: DE, platform: ios, target: imps_d0, ad_type: Interstitial,
+     magnitude: 0.72, start: 2026-09-27, ramp_days: 42, description: "Interstitial D0 impressions eroding -28% over 6 weeks"}
+
+  # BR Android - a network event mid-week that stays below the network flag thresholds
+  - {id: st_br_and_mintegral_inter, geo: BR, platform: android, target: cpm, ad_type: Interstitial, network: Mintegral,
+     magnitude: 1.20, start: 2026-11-04, description: "Mintegral interstitial CPM +20% from Wednesday (unflagged)"}
+
+  # DE Android, BR iOS: controls (nothing planted). With this seed, BR iOS has a pure-noise
+  # red herring (D1 interstitials per active, z about +5): unusual, but worth few points.
+
+# GB Android - a data artifact, not a business change (twin of the US Android case above)
+data_issues:
+  - {kind: missing_d1, geo: GB, platform: android, install_date: 2026-11-07,
+     description: "Firebase D1 data missing for the Saturday cohort (not matured)"}
